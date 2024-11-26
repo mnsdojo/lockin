@@ -13,6 +13,26 @@ function FocusLock() {
   const [remainingTime, setRemainingTime] = useState(0);
   const [error, setError] = useState("");
 
+  const handleLock = () => {
+    if (!url || !duration) {
+      setError("Please enter both URL and duration.");
+      return;
+    }
+    const durationInMinutes = parseInt(duration);
+    if (isNaN(durationInMinutes) || durationInMinutes <= 0) {
+      setError("Please enter a valid duration in minutes");
+      return;
+    }
+    setError("");
+    setIsLocked(true);
+    setRemainingTime(durationInMinutes * 60);
+  };
+  const formatTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}: ${remainingSeconds.toString().padStart(2, "0")}`;
+  };
+
   return (
     <Card className="w-[350px]">
       <CardHeader>
@@ -53,9 +73,12 @@ function FocusLock() {
           {isLocked ? (
             <div className="text-center">
               <p className="text-lg font-semibold">Locked to : {url}</p>
+              <p className="text-xl font-bold">
+                Time remaining: {formatTime(remainingTime)}
+              </p>
             </div>
           ) : (
-            <Button>
+            <Button onClick={handleLock}>
               <Lock className="mr-2 h-4 w-4" /> Lock Focus
             </Button>
           )}

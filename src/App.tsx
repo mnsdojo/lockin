@@ -1,5 +1,11 @@
+import FocusLock from "./components/FocusLock";
+
 function Page() {
-  return <div></div>;
+  return (
+    <div>
+      <FocusLock />
+    </div>
+  );
 }
 
 export default Page;
