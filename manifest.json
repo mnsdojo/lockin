@@ -3,7 +3,7 @@
   "name": "LockIn",
   "version": "1.0.0",
   "description": "Locks you to specific websitee to prevent distraction ",
-  "permission": ["tabs", "storage"],
+  "permissions": ["tabs", "storage"],
   "action": {
     "default_popup": "index.html"
   }
