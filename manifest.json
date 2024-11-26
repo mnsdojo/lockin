@@ -6,5 +6,6 @@
   "permissions": ["tabs", "storage"],
   "action": {
     "default_popup": "index.html"
-  }
+  },
+  "host_permissions": ["https://*/*"]
 }

@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, Lock } from "lucide-react";
+import { AlertCircle, Lock, Unlock } from "lucide-react";
 import { Label } from "@radix-ui/react-label";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
@@ -26,12 +26,37 @@ function FocusLock() {
     setError("");
     setIsLocked(true);
     setRemainingTime(durationInMinutes * 60);
+    chrome.storage.local.set({
+      lockedUrl: url,
+      duration: durationInMinutes,
+      startTime: Date.now(),
+    });
   };
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes}: ${remainingSeconds.toString().padStart(2, "0")}`;
   };
+
+  const handleUnlock = () => {
+    setIsLocked(false);
+    setUrl("");
+    setDuration("");
+    setRemainingTime(0);
+    chrome.storage.local.remove(["lockedUrl", "duration", "startTime"]);
+  };
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    if (isLocked && remainingTime > 0) {
+      timer = setInterval(() => {
+        setRemainingTime((prev) => prev - 1);
+      }, 1000);
+    } else if (remainingTime === 0 && isLocked) {
+      setIsLocked(false);
+    }
+    return () => clearInterval(timer);
+  }, [isLocked, remainingTime]);
 
   return (
     <Card className="w-[350px]">
@@ -76,6 +101,9 @@ function FocusLock() {
               <p className="text-xl font-bold">
                 Time remaining: {formatTime(remainingTime)}
               </p>
+              <Button variant="destructive" onClick={handleUnlock}>
+                <Unlock className="mr-2 h-4 w-4" /> Unlock
+              </Button>
             </div>
           ) : (
             <Button onClick={handleLock}>
