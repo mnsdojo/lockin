@@ -26,11 +26,24 @@ function FocusLock() {
     setError("");
     setIsLocked(true);
     setRemainingTime(durationInMinutes * 60);
-    chrome.storage.local.set({
-      lockedUrl: url,
-      duration: durationInMinutes,
-      startTime: Date.now(),
-    });
+
+    chrome.storage.local.set(
+      {
+        lockedUrl: url,
+        duration: durationInMinutes,
+        startTime: Date.now(),
+      },
+      () => {
+        chrome.runtime.sendMessage({
+          type: "START_LOCK",
+          lockData: {
+            lockedUrl: url,
+            duration: durationInMinutes,
+            startTime: Date.now(),
+          },
+        });
+      }
+    );
   };
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
@@ -58,6 +71,54 @@ function FocusLock() {
     return () => clearInterval(timer);
   }, [isLocked, remainingTime]);
 
+  useEffect(() => {
+    chrome.storage.local.get(
+      ["lockedUrl", "startTime", "duration", "remainingTime"],
+      (data) => {
+        if (data.lockedUrl && data.startTime && data.duration) {
+          const elapsed = Date.now() - data.startTime;
+          const remaining = data.duration * 60 * 1000 - elapsed;
+          if (remaining > 0) {
+            setRemainingTime(Math.floor(remaining / 1000));
+            setUrl(data.lockedUrl);
+            setDuration(data.duration.toString());
+            setIsLocked(true);
+          }
+        }
+      }
+    );
+  }, []);
+
+  useEffect(() => {
+    if (!chrome || !chrome.tabs) {
+      console.error("Chrome tabs API not available");
+      return;
+    }
+
+    async function fetchActiveTab() {
+      try {
+        const tabs = await chrome.tabs.query({
+          active: true,
+          currentWindow: true,
+        });
+        const activeUrl = tabs[0]?.url;
+        if (activeUrl) {
+          setUrl(activeUrl);
+        }
+      } catch (error) {
+        console.error("Error fetching active tab:", error);
+      }
+    }
+    fetchActiveTab();
+    const handleTabActivated = () => {
+      fetchActiveTab();
+    };
+    chrome.tabs.onActivated.addListener(handleTabActivated);
+
+    return () => {
+      chrome.tabs.onActivated.removeListener(handleTabActivated);
+    };
+  }, []);
   return (
     <Card className="w-[350px]">
       <CardHeader>
@@ -75,13 +136,7 @@ function FocusLock() {
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="url">Website URL</Label>
-            <Input
-              id="url"
-              placeholder="https://example.com"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              disabled={isLocked}
-            />
+            <Input id="url" defaultValue={url} readOnly disabled={isLocked} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="duration">Duration (minutes)</Label>
